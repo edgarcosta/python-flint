@@ -1,6 +1,6 @@
 import sys
 import os
-from subprocess import check_call
+from subprocess import check_call, check_output
 
 from Cython.Distutils import build_ext
 from Cython.Build import cythonize
@@ -129,6 +129,25 @@ for mod_name, src_files in ext_files:
 
 for e in ext_modules:
     e.cython_directives = {"embedsignature": True}
+
+
+root_path = os.path.dirname(os.path.abspath(__file__))
+def bootstrap_and_configure():
+    c_lib_path = os.path.join(root_path, "src/lib")
+    os.chdir(c_lib_path)
+    bootsrap_script = os.path.join(c_lib_path, "bootstrap.sh")
+    if not os.path.exists(bootsrap_script):
+        raise RuntimeError("Missing 'bootstrap.sh' script")
+    check_call([bootsrap_script])
+    configure_script = os.path.join(c_lib_path, "configure")
+    if not os.path.exists(configure_script):
+        raise RuntimeError("Missing 'configure' script")
+    check_call([configure_script])
+    srcs=check_output(["make print-SOURCES"]).split("\n")[-1][len("SOURCES="):].split()
+    os.chdir(root_path)
+
+
+packages.append("flint.flint")
 
 
 setup(
