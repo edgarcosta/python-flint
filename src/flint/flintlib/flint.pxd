@@ -21,7 +21,7 @@ cdef enum:
 # macro which is defined in flint/flint.h.
 #
 
-cdef extern from "gmp.h":
+cdef extern from "<gmp.h>":
     ctypedef unsigned long ulong
     ctypedef unsigned long mp_limb_t
     ctypedef long mp_size_t

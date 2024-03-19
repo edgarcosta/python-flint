@@ -1,12 +1,13 @@
 import sys
 import os
-from subprocess import check_call, check_output
+from subprocess import check_call
+from glob import glob
 
 from Cython.Distutils import build_ext
 from Cython.Build import cythonize
 
 
-if sys.version_info < (3, 12):
+if False and sys.version_info < (3, 12):
     from distutils.core import setup
     from distutils.extension import Extension
     from numpy.distutils.system_info import default_include_dirs, default_lib_dirs
@@ -18,6 +19,8 @@ else:
     default_include_dirs = []
     default_lib_dirs = []
 
+default_include_dirs.append('/usr/local/include')
+default_lib_dirs.append('/usr/local/lib')
 
 libraries = ["flint"]
 
@@ -115,6 +118,11 @@ ext_files = [
     ("flint.functions.showgood", ["src/flint/functions/showgood.pyx"]),
 ]
 
+libraries = []
+
+flint_headers_dir = os.path.join(os.path.dirname(__file__), 'include')
+default_include_dirs.append(flint_headers_dir)
+
 ext_options = {
     "libraries" : libraries,
     "library_dirs" : default_lib_dirs,
@@ -131,23 +139,50 @@ for e in ext_modules:
     e.cython_directives = {"embedsignature": True}
 
 
-root_path = os.path.dirname(os.path.abspath(__file__))
-def bootstrap_and_configure():
+def flint_as_extension():
+    root_path = os.path.dirname(os.path.abspath(__file__))
     c_lib_path = os.path.join(root_path, "src/lib")
-    os.chdir(c_lib_path)
-    bootsrap_script = os.path.join(c_lib_path, "bootstrap.sh")
-    if not os.path.exists(bootsrap_script):
-        raise RuntimeError("Missing 'bootstrap.sh' script")
-    check_call([bootsrap_script])
-    configure_script = os.path.join(c_lib_path, "configure")
-    if not os.path.exists(configure_script):
-        raise RuntimeError("Missing 'configure' script")
-    check_call([configure_script])
-    srcs=check_output(["make print-SOURCES"]).split("\n")[-1][len("SOURCES="):].split()
-    os.chdir(root_path)
+    def bootstrap_and_configure():
+        curdir = os.path.abspath(os.curdir)
+        os.chdir(c_lib_path)
+        bootsrap_script = os.path.join(c_lib_path, "bootstrap.sh")
+        configure_script = os.path.join(c_lib_path, "configure")
+        makefile = os.path.join(c_lib_path, "makefile")
+        if not os.path.exists(bootsrap_script):
+            raise RuntimeError("Missing 'bootstrap.sh' script")
+        if not os.path.exists(configure_script):
+            check_call([bootsrap_script])
+        if not os.path.exists(configure_script):
+            raise RuntimeError("Missing 'configure' script")
+        if not os.path.exists(makefile):
+            check_call([configure_script])
+        os.chdir(curdir)
+
+    def sources():
+        src = os.path.join(c_lib_path, "src")
+        header_dirs = [
+            elt for elt in os.listdir(src)
+            if os.path.isdir(os.path.join(src, elt))
+            and os.path.isfile(os.path.join(src, elt + ".h"))
+        ]
+        dirs = ['generic_files'] + header_dirs
+
+        excluded_files = [os.path.join(src, "fmpz_lll", f) for f in ["babai.c", "mpf2_lll.c", "d_lll.c"]]
+
+        return [os.path.relpath(f, root_path) for d in dirs for f in glob(os.path.join(src, d, "*.c")) if f not in excluded_files]
+    bootstrap_and_configure()
+    # print("sources = ", sources())
+    return Extension(
+        "lib",
+        language="c",
+        sources=sources(),
+        libraries=["gmp", "mpfr", "pthread"],
+    )
 
 
-packages.append("flint.flint")
+
+packages.append("lib")
+ext_modules.append(flint_as_extension())
 
 
 setup(
