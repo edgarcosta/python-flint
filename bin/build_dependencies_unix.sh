@@ -281,7 +281,7 @@ echo
 #curl -O -L https://github.com/flintlib/flint/releases/download/v$FLINTVER/flint-$FLINTVER.tar.gz
 curl -O -L https://github.com/flintlib/flint/archive/refs/tags/nightly.tar.gz
 FLINTVER=nightly
-tar xf flint-$FLINTVER.tar.gz
+tar xf $FLINTVER.tar.gz
 cd flint-$FLINTVER
   ./bootstrap.sh
   echo ./configure --prefix=$PREFIX\
