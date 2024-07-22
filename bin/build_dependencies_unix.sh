@@ -282,6 +282,15 @@ curl -O -L https://github.com/flintlib/flint/releases/download/v$FLINTVER/flint-
 tar xf flint-$FLINTVER.tar.gz
 cd flint-$FLINTVER
   ./bootstrap.sh
+  echo ./configure --prefix=$PREFIX\
+    --host=$HOST_ARG\
+    --disable-assembly\
+    --disable-avx2\
+    --disable-avx512\
+    $FLINTARB_WITHGMP\
+    --with-mpfr=$PREFIX\
+    --disable-static\
+    --disable-debug
   ./configure --prefix=$PREFIX\
     --host=$HOST_ARG\
     --disable-assembly\
@@ -291,6 +300,7 @@ cd flint-$FLINTVER
     --with-mpfr=$PREFIX\
     --disable-static\
     --disable-debug
+  make print-CFLAGS
   make -j6
   make install
 cd ..
